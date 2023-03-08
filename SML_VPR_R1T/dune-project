@@ -1,0 +1,31 @@
+(lang dune 2.8)
+
+(generate_opam_files true)
+
+(cram enable)
+
+(license LGPL-3.0-or-later)
+
+(authors "Nikita Olkhovsky")
+
+(maintainers "Nikita Olkhovsky")
+
+(bug_reports "https://github.com/NikitaSPBU/fp2022")
+
+(package
+ (name Lambda) ; FIXME and regenerate .opam file using 'dune build @install'
+ (synopsis "SML + Value polymorphism restriction + rank 1 typing")
+ (description "SML + Value polymorphism restriction + rank 1 typing")
+ (version 0.1)
+ (depends
+  dune
+  angstrom
+  (ppx_inline_test :with-test)
+  qcheck-core
+  ppx_expect
+  ppx_deriving
+  (odoc :with-doc)
+  (ocamlformat :build)
+  base
+  ; After adding dependencies to 'dune' files and the same dependecies here too
+  ))
