@@ -1,4 +1,4 @@
-(** Copyright 2022-2023, Anton Kraev *)
+(** Copyright 2023, Nikita Olkhovsky *)
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 

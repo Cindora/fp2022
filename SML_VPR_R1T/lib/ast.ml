@@ -1,4 +1,4 @@
-(** Copyright 2022-2023, Nikita Olkhovsky *)
+(** Copyright 2023, Nikita Olkhovsky *)
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 
@@ -35,23 +35,41 @@ type binary_op =
 
 (* Выражения *)
 type expr =
-  | ELiteral of b_liter (* 123 *)
-  | EIdentifier of name (* xs *)
-  | EUnaryOp of unary_op * expr (* ~1 *)
-  | EBinaryOp of binary_op * expr * expr (* 2 + 2 *)
-  | ETuple of expr list (* (1, '2', "3") *)
-  | EList of expr list (* [1, 2] *)
-  | EConsList of expr * expr (* 1 :: [2] *)
+  | XLiteral of b_liter (* 123 *)
+  | XIdentifier of name (* xs *)
+  | XUnaryOp of unary_op * expr (* ~1 *)
+  | XBinaryOp of binary_op * expr * expr (* 2 + 2 *)
+  | XTuple of expr list (* (expr, expr, expr) *)
+  | XList of expr list (* [expr, expr] *)
+  | XConsList of expr * expr (* expr :: [expr, expr] *)
+  | XCaseOf of expr * (expr * expr) list
+    (* case xs of
+        [] => 0 
+      | x::_ => x *)
+  | XLetIn of expr list * expr (* let val a = 1 val b = 2 in a + b end *)
+  | XApplication of expr * expr (* f x: ident * liter *)
+  | XValDec of name * expr (* val ident = liter *)
+  | XValRecDec of name * expr
+    (* val rec factorial = fn n => if n <= 1 then 1 else n * factorial (n - 1) *)
+  | XArrowFun of name list * expr (* fn x => x + 1 *)
+  | XIfThenElse of expr * expr * expr (* if true then 1 else 0 *)
 [@@deriving show { with_path = false }]
 
 (* Конструкторы выражений *)
-let e_b_expr x = ELiteral x
-let e_identifier x = EIdentifier x
-let e_unary_op op x = EUnaryOp (op, x)
-let e_binary_op op left right = EBinaryOp (op, left, right)
-let e_tuple elements = ETuple elements
-let e_list elements = EList elements
-let e_cons_list head tail = EConsList (head, tail)
+let e_b_expr x = XLiteral x
+let e_identifier x = XIdentifier x
+let e_unary_op op x = XUnaryOp (op, x)
+let e_binary_op op left right = XBinaryOp (op, left, right)
+let e_tuple elements = XTuple elements
+let e_list elements = XList elements
+let e_cons_list head tail = XConsList (head, tail)
+let e_case_of expression cases = XCaseOf (expression, cases)
+let e_let_in declarations body = XLetIn (declarations, body)
+let e_application func args = XApplication (func, args)
+let e_val_dec value_id expression = XValDec (value_id, expression)
+let e_val_rec_dec value_id expression = XValRecDec (value_id, expression)
+let e_arrow_fun args_id expression = XArrowFun (args_id, expression)
+let e_if_then_else cond if_true if_false = XIfThenElse (cond, if_true, if_false)
 
 (* Конструкторы операторов *)
 let uneg _ = Neg
