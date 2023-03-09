@@ -1,8 +1,7 @@
 (library
- (name sml_vpr_lib)
+ (name SML_VPR_lib)
  (public_name SML_VPR.Lib)
- (modules Ast)
- (modules_without_implementation ast)
+ (modules Ast Parser)
  (libraries base angstrom)
  (preprocess
   (pps ppx_expect ppx_deriving.show))
