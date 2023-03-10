@@ -1,0 +1,8 @@
+(executable
+ (name demoParser)
+ (public_name demoParser)
+ (modules)
+ (libraries SML_VPR_lib stdio))
+
+(cram
+ (deps ./demoParser.exe))
