@@ -5,94 +5,64 @@
 open Angstrom
 open Ast
 
-(* helper functions and parsers *)
-let is_space = function
-  | ' ' | '\t' | '\n' | '\r' -> true
+let is_number = function
+  | '0' .. '9' -> true
   | _ -> false
 ;;
 
-let is_first_char = function
-  | 'a' .. 'z' | '_' -> true
-  | _ -> false
-;;
-
-let is_varname_char = function
-  | 'a' .. 'z' | 'A' .. 'Z' | '_' | '0' .. '9' -> true
-  | _ -> false
-;;
-
-let skip_spaces = take_while is_space
-let parens p = skip_spaces *> char '(' *> skip_spaces *> p <* skip_spaces <* char ')'
-
-let integer =
-  take_while1 (function
-    | '0' .. '9' -> true
+let skip_spaces =
+  take_while (function
+    | ' ' | '\t' | '\n' | '\r' -> true
     | _ -> false)
-  >>| int_of_string
 ;;
 
-let varname =
-  peek_char_fail
-  >>= fun first ->
-  if is_first_char first
-  then take_while is_varname_char
-  else fail "Parsing error: bad first symbol of id."
-;;
+let parens p = skip_spaces *> char '(' *> skip_spaces *> p <* skip_spaces <* char ')'
+let integer = take_while1 is_number >>| int_of_string
 
-let id_of_expr = function
-  | XIdentifier x -> return x
-  | _ -> fail "Unreachable"
-;;
-
-let id_list_of_expr = function
-  | XIdentifier x -> return [ x ]
-  | _ -> fail "Unreachable"
-;;
-
-(* dispatch for parsers *)
-type dispatch =
-  { unary_op_p : dispatch -> Ast.expr Angstrom.t
-  ; binary_op_p : dispatch -> Ast.expr Angstrom.t
-  ; tuple_p : dispatch -> Ast.expr Angstrom.t
-  ; list_p : dispatch -> Ast.expr Angstrom.t
-  ; cons_list_p : dispatch -> Ast.expr Angstrom.t
-  ; case_of_p : dispatch -> Ast.expr Angstrom.t
-  ; let_in_p : dispatch -> Ast.expr Angstrom.t
-  ; application_p : dispatch -> Ast.expr Angstrom.t
-  ; val_dec_p : dispatch -> Ast.expr Angstrom.t
-  ; val_rec_dec_p : dispatch -> Ast.expr Angstrom.t
-  ; arrow_fun_p : dispatch -> Ast.expr Angstrom.t
-  ; if_then_else_p : dispatch -> Ast.expr Angstrom.t
-  ; expr_p : dispatch -> Ast.expr Angstrom.t
+(* sender for parsers *)
+type sender =
+  { snd_unary : sender -> Ast.expr Angstrom.t
+  ; snd_binary : sender -> Ast.expr Angstrom.t
+  ; snd_tuplexpr : sender -> Ast.expr Angstrom.t
+  ; snd_list : sender -> Ast.expr Angstrom.t
+  ; snd_cons_list : sender -> Ast.expr Angstrom.t
+  ; snd_caseexpr : sender -> Ast.expr Angstrom.t
+  ; snd_let : sender -> Ast.expr Angstrom.t
+  ; snd_app : sender -> Ast.expr Angstrom.t
+  ; snd_val_dec : sender -> Ast.expr Angstrom.t
+  ; snd_val_rec_dec : sender -> Ast.expr Angstrom.t
+  ; snd_arrfun : sender -> Ast.expr Angstrom.t
+  ; snd_if_then_else : sender -> Ast.expr Angstrom.t
+  ; snd_expr : sender -> Ast.expr Angstrom.t
   }
 
 (* expression parsers *)
-let literal_p =
+let snd_liter =
   fix (fun slf ->
     skip_spaces
     *>
-    let int_literal_p = integer >>| fun x -> BaseInt x in
-    let char_literal_p = char '\'' *> any_char <* char '\'' >>| fun x -> BaseChar x in
-    let string_literal_p =
+    let int_snd_liter = integer >>| fun x -> BaseInt x in
+    let char_snd_liter = char '\'' *> any_char <* char '\'' >>| fun x -> BaseChar x in
+    let string_snd_liter =
       char '"' *> take_while (fun x -> x != '"') <* char '"' >>| fun x -> BaseString x
     in
-    let bool_literal_p =
+    let bool_snd_liter =
       string "true" <|> string "false" >>| bool_of_string >>| fun x -> BaseBool x
     in
-    let unit_literal_p = string "()" >>| fun _ -> BaseUnit in
-    let parse_literal =
+    let unit_snd_liter = string "()" >>| fun _ -> BaseUnit in
+    let parser_literal =
       choice
-        [ int_literal_p
-        ; char_literal_p
-        ; string_literal_p
-        ; bool_literal_p
-        ; unit_literal_p
+        [ int_snd_liter
+        ; char_snd_liter
+        ; string_snd_liter
+        ; bool_snd_liter
+        ; unit_snd_liter
         ]
     in
-    parens slf <|> lift e_b_expr parse_literal)
+    parens slf <|> lift expr_b_expr parser_literal)
 ;;
 
-let identifier_p =
+let snd_identifier =
   fix (fun _ ->
     skip_spaces
     *>
@@ -116,394 +86,410 @@ let identifier_p =
       ; "andalso"
       ]
     in
-    let parse_identifier =
-      varname
+    let parser_identifier =
+      peek_char_fail
+      >>= (fun first ->
+            if (function
+                | 'a' .. 'z' | '_' -> true
+                | _ -> false)
+                 first
+            then
+              take_while (function
+                | 'a' .. 'z' | 'A' .. 'Z' | '_' | '0' .. '9' -> true
+                | _ -> false)
+            else fail "Некорректный символ в имени.")
       >>= fun name ->
       if List.exists (fun x -> x = name) keywords
-      then fail "Parsing error: keyword used."
-      else return (e_identifier name)
+      then fail "Использовано ключевое слово в имени."
+      else return (expr_identifier name)
     in
-    parse_identifier)
+    parser_identifier)
 ;;
 
-let unary_op_p d =
+let snd_unary s =
   fix (fun slf ->
     skip_spaces
     *>
-    let parse_content_neg =
+    let helper_parser_neg =
       choice
-        [ parens (d.unary_op_p d)
-        ; literal_p
-        ; identifier_p
-        ; d.binary_op_p d
-        ; d.case_of_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; d.if_then_else_p d
+        [ parens (s.snd_unary s)
+        ; snd_liter
+        ; snd_identifier
+        ; s.snd_binary s
+        ; s.snd_caseexpr s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_if_then_else s
         ]
     in
-    let parse_content_not =
+    let helper_parser_not =
       choice
-        [ parens (d.unary_op_p d)
-        ; parens (d.binary_op_p d)
-        ; parens (d.case_of_p d)
-        ; parens (d.let_in_p d)
-        ; parens (d.application_p d)
-        ; parens (d.if_then_else_p d)
-        ; literal_p
-        ; identifier_p
+        [ parens (s.snd_unary s)
+        ; parens (s.snd_binary s)
+        ; parens (s.snd_caseexpr s)
+        ; parens (s.snd_let s)
+        ; parens (s.snd_app s)
+        ; parens (s.snd_if_then_else s)
+        ; snd_liter
+        ; snd_identifier
         ]
     in
     parens slf
-    <|> lift2 e_unary_op (char '~' >>| uneg) parse_content_neg
-    <|> lift2 e_unary_op (string "not" >>| unot) parse_content_not)
+    <|> lift2 expr_unary_op (char '~' >>| u_neg) helper_parser_neg
+    <|> lift2 expr_unary_op (string "not" >>| u_not) helper_parser_not)
 ;;
 
-let binary_op_p d =
+let snd_binary s =
   fix (fun _ ->
     skip_spaces
     *>
-    let multdiv = skip_spaces *> choice [ char '*' >>| a_mul; char '/' >>| a_div ]
+    let multdiv = skip_spaces *> choice [ char '*' >>| a_mult; char '/' >>| a_div ]
     and addsub = skip_spaces *> choice [ char '+' >>| a_add; char '-' >>| a_sub ]
     and relat =
       skip_spaces
       *> choice
-           [ string ">=" >>| a_gte
-           ; string "<=" >>| a_lse
-           ; char '>' >>| a_gt
-           ; char '<' >>| a_ls
+           [ string ">=" >>| a_grteq
+           ; string "<=" >>| a_lesseq
+           ; char '>' >>| a_grt
+           ; char '<' >>| a_less
            ]
     and equality = skip_spaces *> choice [ string "=" >>| a_eq; string "<>" >>| a_neq ]
     and andalso = skip_spaces *> (string "andalso" >>| a_and)
     and orelse = skip_spaces *> (string "orelse" >>| a_or) in
-    let parse_content =
+    let helper_parser =
       choice
-        [ parens (d.binary_op_p d)
-        ; d.unary_op_p d
-        ; d.list_p d
-        ; d.cons_list_p d
-        ; d.case_of_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; d.if_then_else_p d
-        ; literal_p
-        ; identifier_p
+        [ parens (s.snd_binary s)
+        ; s.snd_unary s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_caseexpr s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_if_then_else s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
-    let rec parse_bin_op expr_parser op_parsers =
-      let chainl1 expr_p op_p =
+    let rec parser_bin_op snd_exprarser op_parsers =
+      let chainl1 snd_expr op_p =
         let rec go acc =
-          lift2 (fun f x -> e_binary_op f acc x) op_p expr_p >>= go <|> return acc
+          lift2 (fun f x -> expr_binary_op f acc x) op_p snd_expr >>= go <|> return acc
         in
-        expr_p >>= fun init -> go init
+        snd_expr >>= fun init -> go init
       in
       match op_parsers with
-      | [ op ] -> chainl1 expr_parser op
-      | h :: t -> chainl1 (parse_bin_op expr_parser t) h
-      | _ -> fail "Fail: Not a list"
+      | [ op ] -> chainl1 snd_exprarser op
+      | head :: tail -> chainl1 (parser_bin_op snd_exprarser tail) head
+      | _ -> fail "Не является списком."
     in
-    parse_bin_op parse_content [ orelse; andalso; equality; relat; addsub; multdiv ])
+    parser_bin_op helper_parser [ orelse; andalso; equality; relat; addsub; multdiv ])
 ;;
 
-let parse_collection_helper brackets_parser constructor d =
+let parser_collection_helper brackets_parser constructor s =
   fix (fun slf ->
     skip_spaces
     *>
     let separator = skip_spaces *> char ',' *> skip_spaces <|> skip_spaces in
-    let parse_content =
+    let helper_parser =
       choice
-        [ d.tuple_p d
-        ; d.unary_op_p d
-        ; d.binary_op_p d
-        ; d.list_p d
-        ; d.cons_list_p d
-        ; d.case_of_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_tuplexpr s
+        ; s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_caseexpr s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
-    parens slf <|> lift constructor @@ brackets_parser @@ many (parse_content <* separator))
+    parens slf <|> lift constructor (brackets_parser (many (helper_parser <* separator))))
 ;;
 
-let tuple_p d =
+let snd_tuplexpr s =
   let brackets parser = skip_spaces *> char '(' *> parser <* char ')' in
-  parse_collection_helper brackets e_tuple d
+  parser_collection_helper brackets expr_tuple s
 ;;
 
-let list_p d =
+let snd_list s =
   let brackets parser = skip_spaces *> char '[' *> parser <* char ']' in
-  parse_collection_helper brackets e_list d
+  parser_collection_helper brackets expr_list s
 ;;
 
-let cons_list_p d =
+let snd_cons_list s =
   fix (fun slf ->
     skip_spaces
     *>
     let separator = skip_spaces *> string "::" *> skip_spaces
-    and parse_content =
+    and helper_parser =
       choice
-        [ parens (d.cons_list_p d)
-        ; d.unary_op_p d
-        ; parens @@ d.binary_op_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; parens @@ d.case_of_p d
-        ; d.let_in_p d
-        ; parens @@ d.application_p d
-        ; parens @@ d.arrow_fun_p d
-        ; parens @@ d.if_then_else_p d
-        ; literal_p
-        ; identifier_p
+        [ parens (s.snd_cons_list s)
+        ; s.snd_unary s
+        ; parens (s.snd_binary s)
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; parens (s.snd_caseexpr s)
+        ; s.snd_let s
+        ; parens (s.snd_app s)
+        ; parens (s.snd_arrfun s)
+        ; parens (s.snd_if_then_else s)
+        ; snd_liter
+        ; snd_identifier
         ]
     in
-    parens slf <|> lift2 e_cons_list (parse_content <* separator) (slf <|> parse_content))
+    parens slf
+    <|> lift2 expr_cons_list (helper_parser <* separator) (slf <|> helper_parser))
 ;;
 
-let case_of_p d =
+let snd_caseexpr s =
   fix (fun slf ->
     skip_spaces
     *>
-    let parse_content_left =
+    let helper_parser_left =
       choice
-        [ d.unary_op_p d
-        ; d.cons_list_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_unary s
+        ; s.snd_cons_list s
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
-    let parse_content_right =
+    let helper_parser_right =
       choice
-        [ d.case_of_p d
-        ; d.unary_op_p d
-        ; d.binary_op_p d
-        ; d.cons_list_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; d.arrow_fun_p d
-        ; d.if_then_else_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_caseexpr s
+        ; s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_cons_list s
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_arrfun s
+        ; s.snd_if_then_else s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
     parens slf
     <|> string "case"
         *> lift2
-             e_case_of
-             parse_content_right
-             (let parse_case =
+             expr_casexpr_of
+             helper_parser_right
+             (let parser_case =
                 lift2
                   (fun case action -> case, action)
-                  parse_content_left
-                  (skip_spaces *> string "=>" *> parse_content_right)
+                  helper_parser_left
+                  (skip_spaces *> string "=>" *> helper_parser_right)
               and separator = skip_spaces *> string "|" in
               skip_spaces
               *> string "of"
               *> skip_spaces
               *> (string "|" <|> skip_spaces)
-              *> sep_by1 separator parse_case))
+              *> sep_by1 separator parser_case))
 ;;
 
-let let_in_p d =
+let snd_let s =
   fix (fun slf ->
     skip_spaces
     *>
-    let parse_content =
+    let helper_parser =
       choice
-        [ d.let_in_p d
-        ; d.unary_op_p d
-        ; d.binary_op_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; d.cons_list_p d
-        ; d.case_of_p d
-        ; d.application_p d
-        ; d.arrow_fun_p d
-        ; d.if_then_else_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_let s
+        ; s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_caseexpr s
+        ; s.snd_app s
+        ; s.snd_arrfun s
+        ; s.snd_if_then_else s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
     parens slf
     <|> string "let"
-        *> take_while1 is_space
+        *> take_while1 (function
+             | ' ' | '\t' | '\n' | '\r' -> true
+             | _ -> false)
         *> lift2
-             e_let_in
-             (many1 (d.val_dec_p d <|> d.val_rec_dec_p d))
-             (skip_spaces *> string "in" *> parse_content <* skip_spaces <* string "end"))
+             expr_let_in
+             (many1 (s.snd_val_dec s <|> s.snd_val_rec_dec s))
+             (skip_spaces *> string "in" *> helper_parser <* skip_spaces <* string "end"))
 ;;
 
-let application_p d =
+let snd_app s =
   fix (fun slf ->
     skip_spaces
     *>
-    let function_parser =
+    let parser_func =
       choice
-        [ parens (d.case_of_p d)
-        ; parens (d.let_in_p d)
-        ; parens (d.arrow_fun_p d)
-        ; parens (d.if_then_else_p d)
-        ; identifier_p
+        [ parens (s.snd_caseexpr s)
+        ; parens (s.snd_let s)
+        ; parens (s.snd_arrfun s)
+        ; parens (s.snd_if_then_else s)
+        ; snd_identifier
         ]
     in
-    let operand_parser =
+    let parser_op =
       choice
-        [ parens (d.application_p d)
-        ; parens (d.unary_op_p d)
-        ; parens (d.binary_op_p d)
-        ; parens (d.tuple_p d)
-        ; d.list_p d
-        ; parens (d.cons_list_p d)
-        ; parens (d.case_of_p d)
-        ; parens (d.let_in_p d)
-        ; parens (d.arrow_fun_p d)
-        ; parens (d.if_then_else_p d)
-        ; literal_p
-        ; identifier_p
+        [ parens (s.snd_app s)
+        ; parens (s.snd_unary s)
+        ; parens (s.snd_binary s)
+        ; parens (s.snd_tuplexpr s)
+        ; s.snd_list s
+        ; parens (s.snd_cons_list s)
+        ; parens (s.snd_caseexpr s)
+        ; parens (s.snd_let s)
+        ; parens (s.snd_arrfun s)
+        ; parens (s.snd_if_then_else s)
+        ; snd_liter
+        ; snd_identifier
         ]
     in
-    let apply_lift acc = lift (e_application acc) operand_parser in
+    let apply_lift acc = lift (expr_application acc) parser_op in
     let rec go acc = apply_lift acc >>= go <|> return acc in
-    parens slf <|> function_parser >>= fun init -> apply_lift init >>= fun init -> go init)
+    parens slf <|> parser_func >>= fun init -> apply_lift init >>= fun init -> go init)
 ;;
 
-let parse_value_declaration_helper keyword constructor d =
+let parser_value_declaration_helper keyword constructor s =
   fix (fun _ ->
     skip_spaces
     *> string keyword
     *> skip_spaces
     *>
-    let parse_content =
+    let helper_parser =
       choice
-        [ d.unary_op_p d
-        ; d.binary_op_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; d.cons_list_p d
-        ; d.case_of_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; d.arrow_fun_p d
-        ; d.if_then_else_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_caseexpr s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_arrfun s
+        ; s.snd_if_then_else s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
     lift2
       constructor
-      (identifier_p
-       >>= id_of_expr
+      (snd_identifier
+       >>= (function
+             | XIdentifier x -> return x
+             | _ -> fail "Переменная недоступна.")
        >>= fun name ->
-       if name = "_" then fail "Parsing error: wildcard not expected." else return name)
-      (skip_spaces *> string "=" *> parse_content))
+       match name with
+       | "_" -> fail "Подстановка не ожидается."
+       | _ -> return name)
+      (skip_spaces *> string "=" *> helper_parser))
 ;;
 
-let val_dec_p d = parse_value_declaration_helper "val" e_val_dec d
-let val_rec_dec_p d = parse_value_declaration_helper "val rec" e_val_rec_dec d
+let snd_val_dec s = parser_value_declaration_helper "val" expr_val_dec s
+let snd_val_rec_dec s = parser_value_declaration_helper "val rec" expr_val_rec_dec s
 
-let arrow_fun_p d =
+let snd_arrfun s =
   fix (fun slf ->
     skip_spaces
     *>
-    let parse_content =
+    let helper_parser =
       choice
-        [ d.arrow_fun_p d
-        ; d.unary_op_p d
-        ; d.binary_op_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; d.cons_list_p d
-        ; d.case_of_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; d.if_then_else_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_arrfun s
+        ; s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_caseexpr s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_if_then_else s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
     parens slf
     <|> string "fn"
         *> lift2
-             e_arrow_fun
-             (identifier_p
-              >>= id_list_of_expr
+             expr_arrow_fun
+             (snd_identifier
+              >>= (function
+                    | XIdentifier x -> return [ x ]
+                    | _ -> fail "Переменная недоступна.")
               <* skip_spaces
               <* string "=>"
               <* skip_spaces)
-             (parse_content <* skip_spaces))
+             (helper_parser <* skip_spaces))
 ;;
 
-let if_then_else_p d =
+let snd_if_then_else s =
   fix (fun slf ->
     skip_spaces
     *>
-    let parse_content =
+    let helper_parser =
       choice
-        [ d.if_then_else_p d
-        ; d.unary_op_p d
-        ; d.binary_op_p d
-        ; d.tuple_p d
-        ; d.list_p d
-        ; d.cons_list_p d
-        ; d.case_of_p d
-        ; d.let_in_p d
-        ; d.application_p d
-        ; d.arrow_fun_p d
-        ; literal_p
-        ; identifier_p
+        [ s.snd_if_then_else s
+        ; s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_tuplexpr s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_caseexpr s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_arrfun s
+        ; snd_liter
+        ; snd_identifier
         ]
     in
     parens slf
     <|> string "if"
         *> lift3
-             e_if_then_else
-             parse_content
-             (skip_spaces *> string "then" *> parse_content)
-             (skip_spaces *> string "else" *> parse_content))
+             expr_if_then_else
+             helper_parser
+             (skip_spaces *> string "then" *> helper_parser)
+             (skip_spaces *> string "else" *> helper_parser))
 ;;
 
-(* Parser of general expression *)
-let expr_p d =
+let snd_expr s =
   choice
-    [ d.unary_op_p d
-    ; d.binary_op_p d
-    ; d.tuple_p d
-    ; d.list_p d
-    ; d.cons_list_p d
-    ; d.case_of_p d
-    ; d.let_in_p d
-    ; d.application_p d
-    ; d.val_dec_p d
-    ; d.val_rec_dec_p d
-    ; d.arrow_fun_p d
-    ; d.if_then_else_p d
-    ; literal_p
-    ; identifier_p
+    [ s.snd_unary s
+    ; s.snd_binary s
+    ; s.snd_tuplexpr s
+    ; s.snd_list s
+    ; s.snd_cons_list s
+    ; s.snd_caseexpr s
+    ; s.snd_let s
+    ; s.snd_app s
+    ; s.snd_val_dec s
+    ; s.snd_val_rec_dec s
+    ; s.snd_arrfun s
+    ; s.snd_if_then_else s
+    ; snd_liter
+    ; snd_identifier
     ]
 ;;
 
-(* Default expression dispatch *)
-let default_d =
-  { unary_op_p
-  ; binary_op_p
-  ; tuple_p
-  ; list_p
-  ; cons_list_p
-  ; case_of_p
-  ; let_in_p
-  ; application_p
-  ; val_dec_p
-  ; val_rec_dec_p
-  ; arrow_fun_p
-  ; if_then_else_p
-  ; expr_p
+let snd_default =
+  { snd_unary
+  ; snd_binary
+  ; snd_tuplexpr
+  ; snd_list
+  ; snd_cons_list
+  ; snd_caseexpr
+  ; snd_let
+  ; snd_app
+  ; snd_val_dec
+  ; snd_val_rec_dec
+  ; snd_arrfun
+  ; snd_if_then_else
+  ; snd_expr
   }
 ;;
 
-(* main parser *)
-let parse_strings str = parse_string ~consume:Prefix (expr_p default_d) str
+let parse_strings str = parse_string ~consume:Prefix (snd_expr snd_default) str

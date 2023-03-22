@@ -52,27 +52,27 @@ let%test _ =
 ;;
 
 let%test _ =
-  parser "case x of 1 => true | _ => false"
+  parser "case xs of h :: tl => true | _ => false"
   = XCaseOf
-      ( XIdentifier "x"
-      , [ XLiteral (BaseInt 1), XLiteral (BaseBool true)
+      ( XIdentifier "xs"
+      , [ XConsList (XIdentifier "h", XIdentifier "tl"), XLiteral (BaseBool true)
         ; XIdentifier "_", XLiteral (BaseBool false)
         ] )
 ;;
 
 let%test _ =
-  parser "let val x = 1 val y = 2 in x + y end"
+  parser "let val x1 = 2 val x2 = 2 in x1 - x2 end"
   = XLetIn
-      ( [ XValDec ("x", XLiteral (BaseInt 1)); XValDec ("y", XLiteral (BaseInt 2)) ]
-      , XBinaryOp (Add, XIdentifier "x", XIdentifier "y") )
+      ( [ XValDec ("x1", XLiteral (BaseInt 2)); XValDec ("x2", XLiteral (BaseInt 2)) ]
+      , XBinaryOp (Sub, XIdentifier "x1", XIdentifier "x2") )
 ;;
 
 let%test _ =
-  parser "f (x y)"
-  = XApplication (XIdentifier "f", XApplication (XIdentifier "x", XIdentifier "y"))
+  parser "func (x y)"
+  = XApplication (XIdentifier "func", XApplication (XIdentifier "x", XIdentifier "y"))
 ;;
 
-let%test _ = parser "val x = not x" = XValDec ("x", XUnaryOp (Not, XIdentifier "x"))
+let%test _ = parser "val d = ~ d" = XValDec ("d", XUnaryOp (Neg, XIdentifier "d"))
 
 let%test _ =
   parser "val rec factorial = fn n => if n <= 1 then 1 else n * factorial (n - 1)"
@@ -81,7 +81,7 @@ let%test _ =
       , XArrowFun
           ( [ "n" ]
           , XIfThenElse
-              ( XBinaryOp (LeEq, XIdentifier "n", XLiteral (BaseInt 1))
+              ( XBinaryOp (LessEq, XIdentifier "n", XLiteral (BaseInt 1))
               , XLiteral (BaseInt 1)
               , XBinaryOp
                   ( Mult
@@ -92,12 +92,13 @@ let%test _ =
 ;;
 
 let%test _ =
-  parser "fn x => fn y => x <= y"
+  parser "fn x => fn y => x = y"
   = XArrowFun
-      ([ "x" ], XArrowFun ([ "y" ], XBinaryOp (LeEq, XIdentifier "x", XIdentifier "y")))
+      ([ "x" ], XArrowFun ([ "y" ], XBinaryOp (Eq, XIdentifier "x", XIdentifier "y")))
 ;;
 
 let%test _ =
-  parser "if true then 1 else 0"
-  = XIfThenElse (XLiteral (BaseBool true), XLiteral (BaseInt 1), XLiteral (BaseInt 0))
+  parser "if true then false else true"
+  = XIfThenElse
+      (XLiteral (BaseBool true), XLiteral (BaseBool false), XLiteral (BaseBool true))
 ;;
