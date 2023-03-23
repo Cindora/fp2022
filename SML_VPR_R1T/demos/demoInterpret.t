@@ -54,7 +54,7 @@ Case of
   > let val rec fix = (fn f => fn x => f (fix f) x) 
   > val fibonacci = (fn self => fn n => if n <= 0 then 0 else if n = 1 then 1 else self (n-1) + self (n-2))
   > val f = (fn n => fix fibonacci n) 
-  > in f 10 end
+  > in f 10 end 
   55
 
 Использование подстановочного знака
