@@ -117,8 +117,8 @@ let%expect_test _ =
 ;;
 
 let%expect_test _ =
-  interpret "let val max = fn x => fn y => (if x < y then y else x)] in f 10 100 end";
-  [%expect {| [100] |}]
+  interpret "let val max = fn x => fn y => (if x < y then y else x) in max 10 (~10) end";
+  [%expect {| 10 |}]
 ;;
 
 let%expect_test _ =

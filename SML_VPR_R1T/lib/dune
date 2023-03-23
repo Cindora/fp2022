@@ -1,7 +1,15 @@
 (library
  (name SML_VPR_lib)
  (public_name SML_VPR.Lib)
- (modules Ast Parser ParserTest Interpreter InterpreterTest)
+ (modules
+  Ast
+  Parser
+  ParserTest
+  Interpreter
+  InterpreterTest
+  Typing
+  Inferencer
+  InferencerTest)
  (libraries base angstrom)
  (preprocess
   (pps ppx_expect ppx_deriving.show))

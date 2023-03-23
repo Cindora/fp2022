@@ -141,7 +141,7 @@ let pp_error fmt (err : error) =
   let open Format in
   match err with
   | `ValueUnbound -> fprintf fmt "Ошибка присваивания значения."
-  | `Unreachable -> fprintf fmt "Данный код недоступен. "
+  | `Unreachable -> fprintf fmt "Данный код недоступен."
   | `OperationUnsupport -> fprintf fmt "Неподдерживаемая операция."
   | `DivisionByZero -> fprintf fmt "Деление на ноль."
   | `WildcardMisuse -> fprintf fmt "Ошибочное использование подстановочного знака."
