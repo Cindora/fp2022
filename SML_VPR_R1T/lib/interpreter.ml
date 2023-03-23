@@ -56,33 +56,41 @@ end = struct
        | Add, ValInt l, ValInt r -> return (ValInt (l + r))
        | Sub, ValInt l, ValInt r -> return (ValInt (l - r))
        | Mult, ValInt l, ValInt r -> return (ValInt (l * r))
-       | Div, ValInt l, ValInt r ->
-         (match r with
-          | 0 -> fail `DivisionByZero
-          | _ -> return (ValInt (l / r)))
+       | Div, ValInt _, ValInt y when y = 0 -> fail `DivisionByZero
+       | Div, ValInt l, ValInt r -> return (ValInt (l / r))
        | (Add | Sub | Mult | Div), _, _ -> fail `Unreachable
        (* And, Or *)
        | And, ValBool l, ValBool r -> return (ValBool (l && r))
        | Or, ValBool l, ValBool r -> return (ValBool (l || r))
        | (And | Or), _, _ -> fail `Unreachable
        (* Eq, NotEq, Greater, GreaterEq, Less, LessEq *)
-       | op, left, right ->
-         let comparison_operation =
-           match op with
-           | Eq -> Base.Poly.( = )
-           | Grt -> Base.Poly.( > )
-           | GrtEq -> Base.Poly.( >= )
-           | Less -> Base.Poly.( < )
-           | LessEq -> Base.Poly.( <= )
-           | _ -> Base.Poly.( <> )
-         in
-         (match left, right with
-          | ValInt l, ValInt r -> return (ValBool (comparison_operation l r))
-          | ValString l, ValString r -> return (ValBool (comparison_operation l r))
-          | ValBool l, ValBool r -> return (ValBool (comparison_operation l r))
-          | ValChar l, ValChar r -> return (ValBool (comparison_operation l r))
-          | ValList l, ValList r -> return (ValBool (comparison_operation l r))
-          | _, _ -> fail `OperationUnsupport))
+       | Eq, ValInt l, ValInt r -> return (ValBool (l == r))
+       | Eq, ValString l, ValString r -> return (ValBool (l == r))
+       | Eq, ValBool l, ValBool r -> return (ValBool (l == r))
+       | Eq, ValTuple l, ValTuple r -> return (ValBool (l == r))
+       | Eq, ValList l, ValList r -> return (ValBool (l == r))
+       | NotEq, ValInt l, ValInt r -> return (ValBool (l != r))
+       | NotEq, ValString l, ValString r -> return (ValBool (l != r))
+       | NotEq, ValBool l, ValBool r -> return (ValBool (l != r))
+       | NotEq, ValTuple l, ValTuple r -> return (ValBool (l != r))
+       | NotEq, ValList l, ValList r -> return (ValBool (l != r))
+       | Grt, ValInt l, ValInt r -> return (ValBool (l > r))
+       | Grt, ValString l, ValString r -> return (ValBool (l > r))
+       | Grt, ValTuple l, ValTuple r -> return (ValBool (l > r))
+       | Grt, ValList l, ValList r -> return (ValBool (l > r))
+       | GrtEq, ValInt l, ValInt r -> return (ValBool (l >= r))
+       | GrtEq, ValString l, ValString r -> return (ValBool (l >= r))
+       | GrtEq, ValTuple l, ValTuple r -> return (ValBool (l >= r))
+       | GrtEq, ValList l, ValList r -> return (ValBool (l >= r))
+       | Less, ValInt l, ValInt r -> return (ValBool (l < r))
+       | Less, ValString l, ValString r -> return (ValBool (l < r))
+       | Less, ValTuple l, ValTuple r -> return (ValBool (l < r))
+       | Less, ValList l, ValList r -> return (ValBool (l < r))
+       | LessEq, ValInt l, ValInt r -> return (ValBool (l <= r))
+       | LessEq, ValString l, ValString r -> return (ValBool (l <= r))
+       | LessEq, ValTuple l, ValTuple r -> return (ValBool (l <= r))
+       | LessEq, ValList l, ValList r -> return (ValBool (l <= r))
+       | _, _, _ -> fail `OperationUnsupport)
     | XIdentifier identifier ->
       (match identifier with
        | "_" -> fail `WildcardMisuse
@@ -256,7 +264,7 @@ open Interpret (struct
   let ( *> ) l r = l >>= fun _ -> r
 end)
 
-let run_interpreter input =
+let interpret input =
   match Parser.parse_strings input with
   | Error msg -> Format.fprintf Format.std_formatter "Parse error: (%S)" msg
   | Ok ast ->

@@ -107,10 +107,10 @@ and value =
   | ValFun of name list * expr * env * is_rec
 
 type error =
-  [ `ValueUnbound
+  [ `DivisionByZero
+  | `ValueUnbound
   | `Unreachable
   | `OperationUnsupport
-  | `DivisionByZero
   | `WildcardMisuse
   | `PatternMatchingFail
   | `PatternMatchingIncomplete
