@@ -2,7 +2,7 @@
  (name demoInterpret)
  (public_name demoInterpret)
  (modules demoInterpret)
- (libraries SML_VPR_lib stdio))
+ (libraries SML_VPR_R1T_lib stdio))
 
 (cram
  (deps ./demoInterpret.exe))

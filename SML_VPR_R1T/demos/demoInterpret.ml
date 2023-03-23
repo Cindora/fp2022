@@ -2,4 +2,4 @@
 
 (** SPDX-License-Identifier: LGPL-3.0-or-later *)
 
-let () = SML_VPR_lib.Interpreter.interpret (Stdio.In_channel.input_all stdin)
+let () = SML_VPR_R1T_lib.Interpreter.interpret (Stdio.In_channel.input_all stdin)

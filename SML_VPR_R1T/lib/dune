@@ -1,6 +1,6 @@
 (library
- (name SML_VPR_lib)
- (public_name SML_VPR.Lib)
+ (name SML_VPR_R1T_lib)
+ (public_name SML_VPR_R1T.Lib)
  (modules
   Ast
   Parser
