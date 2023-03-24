@@ -380,13 +380,13 @@ let parser_value_declaration_helper keyword constructor s =
     lift2
       constructor
       (snd_identifier
-       >>= (function
-             | XIdentifier x -> return x
-             | _ -> fail "Переменная недоступна.")
-       >>= fun name ->
-       match name with
-       | "_" -> fail "Подстановка не ожидается."
-       | _ -> return name)
+      >>= (function
+            | XIdentifier x -> return x
+            | _ -> fail "Переменная недоступна.")
+      >>= fun name ->
+      match name with
+      | "_" -> fail "Подстановка не ожидается."
+      | _ -> return name)
       (skip_spaces *> string "=" *> helper_parser))
 ;;
 
@@ -418,12 +418,12 @@ let snd_arrfun s =
         *> lift2
              expr_arrow_fun
              (snd_identifier
-              >>= (function
-                    | XIdentifier x -> return [ x ]
-                    | _ -> fail "Переменная недоступна.")
-              <* skip_spaces
-              <* string "=>"
-              <* skip_spaces)
+             >>= (function
+                   | XIdentifier x -> return [ x ]
+                   | _ -> fail "Переменная недоступна.")
+             <* skip_spaces
+             <* string "=>"
+             <* skip_spaces)
              (helper_parser <* skip_spaces))
 ;;
 
