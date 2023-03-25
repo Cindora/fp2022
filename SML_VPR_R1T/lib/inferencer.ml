@@ -409,7 +409,7 @@ let infer =
           let* identifier, _ =
             match elem with
             | XValDec (id, body) | XValRecDec (id, body) -> return (id, body)
-            | _ -> fail `Unreachable
+            | _ -> fail `Binding
           in
           let* fresh_var = fresh_var in
           let env' = TypeEnv.extend env identifier (Set.empty (module Int), fresh_var) in

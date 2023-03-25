@@ -40,6 +40,7 @@ type error =
   | `NoVariable of identifier
   | `UnificationFailed of type_expr * type_expr
   | `Unreachable
+  | `Binding
   ]
 
 let rec pp_type fmtr type_expr =
@@ -87,6 +88,7 @@ let pp_error fmtr (err : error) =
     pp_type fmtr t2;
     fprintf fmtr "."
   | `Unreachable -> fprintf fmtr "This code is unreachable."
+  | `Binding -> fprintf fmtr "Value binding error."
 ;;
 
 let print_type_expre_error error =
