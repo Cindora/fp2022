@@ -51,12 +51,12 @@ let%expect_test _ =
 
 let%expect_test _ =
   interpret "val x = 1 / 0";
-  [%expect {| Деление на ноль. |}]
+  [%expect {| Division by zero. |}]
 ;;
 
 let%expect_test _ =
   interpret "let val func = fn b => case b of true => false in func false end";
-  [%expect {| Pattern Matсhing не является исчерпывающим. |}]
+  [%expect {| Pattern-matching is not exhaustive. |}]
 ;;
 
 let%expect_test _ =
@@ -69,7 +69,7 @@ let%expect_test _ =
     "let val fibonacci = fn n => if n <= 0 then 0 else if n = 1 then 1 else fibonacci \
      (n-1) + fibonacci (n-2)\n\
     \    in fibonacci 10 end";
-  [%expect {| Ошибка присваивания значения. |}]
+  [%expect {| Unbound value. |}]
 ;;
 
 let%expect_test _ =

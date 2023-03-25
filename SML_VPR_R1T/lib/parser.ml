@@ -97,10 +97,10 @@ let snd_identifier =
               take_while (function
                 | 'a' .. 'z' | 'A' .. 'Z' | '_' | '0' .. '9' -> true
                 | _ -> false)
-            else fail "Некорректный символ в имени.")
+            else fail "Invalid name character.")
       >>= fun name ->
       if List.exists (fun x -> x = name) keywords
-      then fail "Использовано ключевое слово в имени."
+      then fail "Keyword cannot be used in the name."
       else return (expr_identifier name)
     in
     parser_identifier)
@@ -180,7 +180,7 @@ let snd_binary s =
       match op_parsers with
       | [ op ] -> chainl1 snd_exprarser op
       | head :: tail -> chainl1 (parser_bin_op snd_exprarser tail) head
-      | _ -> fail "Не является списком."
+      | _ -> fail "Not a list."
     in
     parser_bin_op helper_parser [ orelse; andalso; equality; relat; addsub; multdiv ])
 ;;
@@ -382,10 +382,10 @@ let parser_value_declaration_helper keyword constructor s =
       (snd_identifier
       >>= (function
             | XIdentifier x -> return x
-            | _ -> fail "Переменная недоступна.")
+            | _ -> fail "Unreachable variable.")
       >>= fun name ->
       match name with
-      | "_" -> fail "Подстановка не ожидается."
+      | "_" -> fail "Wildcard not expected."
       | _ -> return name)
       (skip_spaces *> string "=" *> helper_parser))
 ;;
@@ -420,7 +420,7 @@ let snd_arrfun s =
              (snd_identifier
              >>= (function
                    | XIdentifier x -> return [ x ]
-                   | _ -> fail "Переменная недоступна.")
+                   | _ -> fail "Unreachable variable.")
              <* skip_spaces
              <* string "=>"
              <* skip_spaces)

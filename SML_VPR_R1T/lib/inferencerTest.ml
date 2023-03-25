@@ -123,5 +123,5 @@ let%expect_test _ =
 
 let%expect_test _ =
   parse_and_inference "fn x1 => fn x2 => x1 = true - x2 ";
-  [%expect {| Ошибка типов, тип выражения: bool ожидался тип int. |}]
+  [%expect {| Unification failed: type of the expression is: bool expected type int. |}]
 ;;

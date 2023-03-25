@@ -13,7 +13,7 @@
 (bug_reports "https://github.com/NikitaSPBU/fp2022")
 
 (package
- (name SML_VPR_R1T) ; FIXME and regenerate .opam file using 'dune build @install'
+ (name SML_VPR_R1T)
  (synopsis "SML + Value polymorphism restriction + rank 1 typing")
  (description "SML + Value polymorphism restriction + rank 1 typing")
  (version 0.1)
@@ -26,6 +26,4 @@
   ppx_deriving
   (odoc :with-doc)
   (ocamlformat :build)
-  base
-  ; After adding dependencies to 'dune' files and the same dependecies here too
-  ))
+  base))

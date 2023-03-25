@@ -14,9 +14,10 @@ type b_liter =
 [@@deriving show { with_path = false }]
 
 (* Операторы *)
-and unary_op =
+type unary_op =
   | Neg (* ~ *)
   | Not (* not *)
+[@@deriving show { with_path = false }]
 
 type binary_op =
   | Add
@@ -140,14 +141,13 @@ let print_value = Format.printf "%a\n" pp_value
 let pp_error fmt (err : error) =
   let open Format in
   match err with
-  | `ValueUnbound -> fprintf fmt "Ошибка присваивания значения."
-  | `Unreachable -> fprintf fmt "Данный код недоступен."
-  | `OperationUnsupport -> fprintf fmt "Неподдерживаемая операция."
-  | `DivisionByZero -> fprintf fmt "Деление на ноль."
-  | `WildcardMisuse -> fprintf fmt "Ошибочное использование подстановочного знака."
-  | `PatternMatchingFail -> fprintf fmt "Pattern Matching завершился с ошибкой."
-  | `PatternMatchingIncomplete ->
-    fprintf fmt "Pattern Matсhing не является исчерпывающим."
+  | `ValueUnbound -> fprintf fmt "Unbound value."
+  | `Unreachable -> fprintf fmt "Unreachable code used."
+  | `OperationUnsupport -> fprintf fmt "Unsupported operation."
+  | `DivisionByZero -> fprintf fmt "Division by zero."
+  | `WildcardMisuse -> fprintf fmt "Wildcard misused."
+  | `PatternMatchingFail -> fprintf fmt "Pattern-matching failed."
+  | `PatternMatchingIncomplete -> fprintf fmt "Pattern-matching is not exhaustive."
 ;;
 
 let print_error = Format.printf "%a" pp_error

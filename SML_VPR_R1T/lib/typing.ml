@@ -78,15 +78,15 @@ let print_type_expr type_expr =
 let pp_error fmtr (err : error) =
   let open Format in
   match err with
-  | `OccursCheck -> fprintf fmtr "Ошибка проверки вхождения.\n"
-  | `NoVariable name -> fprintf fmtr "Переменная не определена: %s" name
+  | `OccursCheck -> fprintf fmtr "Occurs check fail."
+  | `NoVariable name -> fprintf fmtr "Variable not defined: %s" name
   | `UnificationFailed (t1, t2) ->
-    fprintf fmtr "Ошибка типов, тип выражения: ";
+    fprintf fmtr "Unification failed: type of the expression is: ";
     pp_type fmtr t1;
-    fprintf fmtr " ожидался тип ";
+    fprintf fmtr " expected type ";
     pp_type fmtr t2;
     fprintf fmtr "."
-  | `Unreachable -> fprintf fmtr "Данный код недоступен."
+  | `Unreachable -> fprintf fmtr "This code is unreachable."
 ;;
 
 let print_type_expre_error error =

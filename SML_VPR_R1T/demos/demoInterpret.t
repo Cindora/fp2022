@@ -65,15 +65,15 @@ Case of
 Ошибки
   $ ./demoInterpret.exe << EOF
   > 1 / 0
-  Деление на ноль.
+  Division by zero.
   $ ./demoInterpret.exe << EOF
   > let val func = fn b => case b of true => false in func false end
-  Pattern Matсhing не является исчерпывающим.
+  Pattern-matching is not exhaustive.
   $ ./demoInterpret.exe << EOF
   > let val fibonacci = fn n => if n <= 0 then 0 else if n = 1 then 1 else fibonacci \
   > (n-1) + fibonacci (n-2)
   > in fibonacci 10 end
-  Ошибка присваивания значения.
+  Unbound value.
   $ ./demoInterpret.exe << EOF
   > let val func = fn x => x * 2 in func _ end
-  Ошибочное использование подстановочного знака.
+  Wildcard misused.
