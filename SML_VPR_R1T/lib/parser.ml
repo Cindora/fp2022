@@ -135,27 +135,31 @@ let snd_unary s =
         ]
     in
     parens slf
-    <|> lift2 expr_unary_op (char '~' >>| u_neg) helper_parser_neg
-    <|> lift2 expr_unary_op (string "not" >>| u_not) helper_parser_not)
+    <|> lift2 expr_unary_op (char '~' >>| fun _ -> Neg) helper_parser_neg
+    <|> lift2 expr_unary_op (string "not" >>| fun _ -> Not) helper_parser_not)
 ;;
 
 let snd_binary s =
   fix (fun _ ->
     skip_spaces
     *>
-    let multdiv = skip_spaces *> choice [ char '*' >>| a_mult; char '/' >>| a_div ]
-    and addsub = skip_spaces *> choice [ char '+' >>| a_add; char '-' >>| a_sub ]
+    let multdiv =
+      skip_spaces *> choice [ (char '*' >>| fun _ -> Mult); (char '/' >>| fun _ -> Div) ]
+    and addsub =
+      skip_spaces *> choice [ (char '+' >>| fun _ -> Add); (char '-' >>| fun _ -> Sub) ]
     and relat =
       skip_spaces
       *> choice
-           [ string ">=" >>| a_grteq
-           ; string "<=" >>| a_lesseq
-           ; char '>' >>| a_grt
-           ; char '<' >>| a_less
+           [ (string ">=" >>| fun _ -> GrtEq)
+           ; (string "<=" >>| fun _ -> LessEq)
+           ; (char '>' >>| fun _ -> Grt)
+           ; (char '<' >>| fun _ -> Less)
            ]
-    and equality = skip_spaces *> choice [ string "=" >>| a_eq; string "<>" >>| a_neq ]
-    and andalso = skip_spaces *> (string "andalso" >>| a_and)
-    and orelse = skip_spaces *> (string "orelse" >>| a_or) in
+    and equality =
+      skip_spaces
+      *> choice [ (string "=" >>| fun _ -> Eq); (string "<>" >>| fun _ -> NotEq) ]
+    and andalso = skip_spaces *> (string "andalso" >>| fun _ -> And)
+    and orelse = skip_spaces *> (string "orelse" >>| fun _ -> Or) in
     let helper_parser =
       choice
         [ parens (s.snd_binary s)

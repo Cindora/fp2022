@@ -75,22 +75,6 @@ let expr_if_then_else if_expr then_expr else_expr =
   XIfThenElse (if_expr, then_expr, else_expr)
 ;;
 
-(* Конструкторы операторов *)
-let u_neg _ = Neg
-let u_not _ = Not
-let a_add _ = Add
-let a_sub _ = Sub
-let a_mult _ = Mult
-let a_div _ = Div
-let a_eq _ = Eq
-let a_neq _ = NotEq
-let a_less _ = Less
-let a_lesseq _ = LessEq
-let a_grt _ = Grt
-let a_grteq _ = GrtEq
-let a_and _ = And
-let a_or _ = Or
-
 type env = (name, value, Base.String.comparator_witness) Base.Map.t
 
 and is_rec =
