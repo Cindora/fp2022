@@ -1,0 +1,8 @@
+(executable
+ (name tests)
+ (modules tests)
+ (public_name tests)
+ (libraries Cypher.Lib stdio))
+
+(cram
+ (deps ./tests.exe))

@@ -1,0 +1,8 @@
+(executable
+ (name interpretRun)
+ (modules interpretRun)
+ (public_name interpretRun)
+ (libraries CSharpExc_lib))
+
+(cram
+ (deps ./interpretRun.exe))

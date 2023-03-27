@@ -1,0 +1,8 @@
+(executable
+ (name interpreter_test)
+ (modules interpreter_test)
+ (public_name SML.test)
+ (libraries SML.lib stdio))
+
+(cram
+ (deps ./interpreter_test.exe))

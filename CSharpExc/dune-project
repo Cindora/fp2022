@@ -1,0 +1,31 @@
+(lang dune 2.8)
+
+(generate_opam_files true)
+
+(cram enable)
+
+(license LGPL-3.0-or-later)
+
+(authors "Polina Badreeva")
+
+(maintainers "st095252@student.spbu.ru")
+
+(bug_reports "none")
+
+(homepage "none")
+
+(package
+ (name CSharpExc)
+ (synopsis "CSharpExc")
+ (description "CSharpExc")
+ (version 0.1)
+ (depends
+  dune
+  opal
+  (ppx_inline_test :with-test)
+  qcheck-core
+  ppx_expect
+  ppx_deriving
+  (odoc :with-doc)
+  (ocamlformat :build)
+  base))

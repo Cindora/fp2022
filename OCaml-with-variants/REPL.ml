@@ -1,60 +1,39 @@
+(** Copyright 2021-2022, Mihail Beloshapkin *)
+
+(** SPDX-License-Identifier: LGPL-3.0-or-later *)
+
 open Base
-open Ocaml_with_var
+open Ocaml_with_var.Repl
+open Ocaml_with_var.Infer
+open Ocaml_with_var.Inter
+open Ocaml_with_var.Parser
+open Ocaml_with_var.Utils
 
-let run_repl _ =
-  Caml.Format.eprintf "OCaml-style toplevel (ocamlc, utop) is not implemented"
+let try_infer e = infer e TypeEnv.empty
+
+let run_repl file =
+  let ctx = read_code_from_file file in
+  let env = infer_declaration_list ctx in
+  let ctx = to_ctx ctx in
+  Caml.Format.printf "\n> ";
+  let s = Stdio.In_channel.input_all Caml.stdin in
+  match parse_exp s with
+  | Result.Ok exp_ast ->
+    (match exp_ast with
+     | Declaration _ -> Format.printf "Application expected"
+     | Application exp as appl ->
+       let open Caml.Format in
+       let typed = infer_top_level_expressions env appl in
+       let result = Interpreter.eval ctx exp in
+       printf "Value: ";
+       output result;
+       print_result_of_inference typed)
+  | Error msg -> Format.printf "Some error: %s" msg
 ;;
-
-(*
-let run_single eval =
-  let open Lambda_lib in
-  let text = Stdio.In_channel.(input_all stdin) |> String.rstrip in
-  let ast = Parser.parse text in
-  match ast with
-  | Error e -> Caml.Format.printf "Error: %a\n%!" Parser.pp_error e
-  | Result.Ok ast ->
-    Caml.Format.printf "Parsed result: %a\n%!" Printast.pp_named ast;
-    (match eval ast with
-     | rez -> Caml.Format.printf "Evaluated result: %a\n%!" Printast.pp_named rez)
-;;
-*)
-type strategy =
-  | CBN
-  | CBV
-  | NO
-  | AO
-
-type opts =
-  { mutable batch : bool
-  ; mutable stra : strategy
-  }
 
 let () =
-  let opts = { batch = false; stra = CBN } in
-  let open Caml.Arg in
-  parse
-    [ ( "-"
-      , Unit (fun () -> opts.batch <- true)
-      , "Read from stdin single program, instead of running full REPL" )
-    ; "-cbv", Unit (fun () -> opts.stra <- CBV), "Call-by-value strategy"
-    ; "-cbn", Unit (fun () -> opts.stra <- CBN), "Call-by-name strategy"
-    ; "-no", Unit (fun () -> opts.stra <- NO), "Normal Order strategy"
-    ; "-ao", Unit (fun () -> opts.stra <- NO), "Applicative Order strategy"
-    ]
-    (fun _ ->
-      Caml.Format.eprintf "Positioned arguments are not supported\n";
-      Caml.exit 1)
-    "Read-Eval-Print-Loop for Utyped Lambda Calculus"
+  let open Caml.Format in
+  printf "\nInput file path:";
+  let file = Stdio.In_channel.input_all Caml.stdin in
+  run_repl file
 ;;
-
-(*
-  let eval =
-    Lambda.apply_strat
-      (match opts.stra with
-       | NO -> Lambda.nor_strat
-       | CBV -> Lambda.cbv_strat
-       | AO -> Lambda.ao_strat
-       | CBN -> Lambda.cbn_strat)
-  in
-  (if opts.batch then run_single else run_repl) eval
-  *)

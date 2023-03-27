@@ -1,0 +1,9 @@
+(library
+ (name cypher_lib)
+ (public_name Cypher.Lib)
+ (modules Ast Interpret Parser)
+ ; (modules_without_implementation ast)
+ (libraries base angstrom graphlib)
+ (preprocess
+  (pps ppx_expect ppx_deriving.show))
+ (inline_tests))

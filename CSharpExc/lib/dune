@@ -1,0 +1,8 @@
+(library
+ (name CSharpExc_lib)
+ (public_name CSharpExc.Lib)
+ (modules Ast Interpreter Parser Types_setup)
+ (libraries base opal stdio)
+ (preprocess
+  (pps ppx_expect ppx_deriving.show ppx_deriving.eq))
+ (inline_tests))

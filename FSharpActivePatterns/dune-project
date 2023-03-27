@@ -1,0 +1,32 @@
+(lang dune 2.8)
+
+(generate_opam_files true)
+
+(cram enable)
+
+(license LGPL-3.0-or-later)
+
+(authors "Grigory Aseev")
+
+(maintainers "https://github.com/Grigory-Aseev")
+
+(bug_reports "https://github.com/Grigory-Aseev/fp2022")
+
+(homepage "https://github.com/Grigory-Aseev/fp2022")
+
+(package
+ (name FSharpActivePatterns)
+ (synopsis "An interpreter for FSharp")
+ (description
+  "Interpreter supports miniML and standard data types: tuples, polymorphic lists, option. There is also the ability to define and use active patterns that look like algebraic constructors.")
+ (version 0.1)
+ (depends
+  dune
+  angstrom
+  (ppx_inline_test :with-test)
+  qcheck-core
+  ppx_expect
+  ppx_deriving
+  (odoc :with-doc)
+  (ocamlformat :build)
+  base))

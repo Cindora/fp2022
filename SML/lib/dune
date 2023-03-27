@@ -1,0 +1,8 @@
+(library
+ (name SML_lib)
+ (public_name SML.lib)
+ (modules Ast Parser Parser_test Interpreter Typing Inferencer)
+ (inline_tests)
+ (libraries base angstrom core)
+ (preprocess
+  (pps ppx_expect ppx_deriving.show ppx_deriving.eq)))

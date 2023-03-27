@@ -1,0 +1,32 @@
+(executable
+ (name demoInterpret)
+ (modules demoInterpret)
+ (public_name demoInterpret)
+ (libraries make_lib))
+
+(executable
+ (name demoPrettyPrint)
+ (modules demoPrettyPrint)
+ (public_name demoPrettyPrint)
+ (libraries make_lib))
+
+(executable
+ (name demoParse)
+ (modules demoParse)
+ (public_name demoParse)
+ (libraries make_lib))
+
+(cram
+ (deps
+  ./demoInterpret.exe
+  ./demoPrettyPrint.exe
+  ./demoParse.exe
+  ./tests/target_select/Makefile
+  ./tests/variable/Makefile
+  ./tests/silent/Makefile
+  ./tests/dependencies/Makefile
+  ./tests/multilines/Makefile
+  ./tests/overriding/Makefile
+  ./tests/circular/Makefile
+  ./tests/errors/Makefile
+  ./tests/timestat/Makefile))

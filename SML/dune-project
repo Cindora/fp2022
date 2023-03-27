@@ -1,0 +1,37 @@
+(lang dune 2.8)
+
+(name SML)
+
+(generate_opam_files true)
+
+(cram enable)
+
+(license LGPL-3.0-or-later)
+
+(authors "Shangareev Rustam")
+
+(maintainers "https://github.com/letit6E")
+
+(bug_reports "https://github.com/letit6E/fp2022")
+
+(homepage "https://github.com/letit6E/fp2022")
+
+(package
+ (name SML)
+ (synopsis "Interpreter for Standard Meta Language")
+ (description
+  "Parser+interpreter for SML with support for multiple data types, functions, recursion, etc.")
+ (depends
+  ocaml
+  dune
+  core
+  angstrom
+  (ppx_inline_test :with-test)
+  qcheck-core
+  ppx_expect
+  ppx_deriving
+  (odoc :with-doc)
+  (ocamlformat :build)
+  base)
+ (tags
+  (SML interpreter parser)))

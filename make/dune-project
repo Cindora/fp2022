@@ -1,0 +1,43 @@
+(lang dune 3.6)
+
+(name make)
+
+(generate_opam_files true)
+
+(cram enable)
+
+(license LGPL-3.0-or-later)
+
+(authors "Ivan Shurenkov")
+
+(maintainers "Ivan Shurenkov")
+
+(bug_reports "https://github.com/ioannessh/fp2022")
+
+(homepage "https://github.com/ioannessh/fp2022")
+
+(package
+ (name make)
+ (synopsis "An interpreter for Make")
+ (description "An interpreter for Make")
+ (depends
+  ocaml
+  dune
+  angstrom
+  core
+  (ppx_inline_test :with-test)
+  qcheck-core
+  ppx_expect
+  ppx_deriving
+  ppx_sexp_conv
+  ppx_hash
+  graphlib
+  ppx_compare
+  ppx_assert
+  (odoc :with-doc)
+  (ocamlformat :build)
+  base
+  ; After adding dependencies to 'dune' files and the same dependecies here too
+  ))
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project

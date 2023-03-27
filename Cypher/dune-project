@@ -1,0 +1,34 @@
+(lang dune 2.8)
+
+(generate_opam_files true)
+
+(cram enable)
+
+(license LGPL-3.0-or-later)
+
+(authors "Drumov Maxim")
+
+(maintainers "Drumov Maxim")
+
+(bug_reports "https://github.com/DrumovMax/fp2022/issues")
+
+(homepage "https://github.com/DrumovMax/fp2022")
+
+(package
+ (name Cypher)
+ (synopsis "Cypher language interpreter")
+ (description "TODO")
+ (version 0.1)
+ (depends
+  dune
+  angstrom
+  (ppx_inline_test :with-test)
+  qcheck-core
+  ppx_expect
+  ppx_deriving
+  (odoc :with-doc)
+  (ocamlformat :build)
+  base
+  graphlib
+  ; After adding dependencies to 'dune' files and the same dependecies here too
+  ))
