@@ -74,6 +74,3 @@ Case of
   > (n-1) + fibonacci (n-2)
   > in fibonacci 10 end
   Unbound value.
-  $ ./demoInterpret.exe << EOF
-  > let val func = fn x => x * 2 in func _ end
-  Wildcard misused.

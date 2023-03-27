@@ -92,14 +92,11 @@ end = struct
        | LessEq, ValList l, ValList r -> return (ValBool (l <= r))
        | _, _, _ -> fail `OperationUnsupport)
     | XIdentifier identifier ->
-      (match identifier with
-       | "_" -> fail `WildcardMisuse
-       | _ ->
-         let* v = find env identifier in
-         (match v with
-          | ValFun (identifier_list, body, env, Rec) ->
-            return (ValFun (identifier_list, body, update env identifier v, Rec))
-          | _ -> return v))
+      let* v = find env identifier in
+      (match v with
+       | ValFun (identifier_list, body, env, Rec) ->
+         return (ValFun (identifier_list, body, update env identifier v, Rec))
+       | _ -> return v)
     | XApplication (func, arg) ->
       let* eval_argument = eval arg env in
       let* eval_function = eval func env in
