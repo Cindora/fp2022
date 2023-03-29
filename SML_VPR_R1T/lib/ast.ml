@@ -103,11 +103,12 @@ type error =
 
 let rec pp_value fmtr =
   let open Format in
-  let pp_list fmt delimiter =
+  let pp_list fmt value =
     pp_print_list
-      ~pp_sep:(fun fmt _ -> fprintf fmt delimiter)
+      ~pp_sep:(fun fmt _ -> fprintf fmt ", ")
       (fun fmt value -> pp_value fmt value)
       fmt
+      value
   in
   function
   | ValInt value -> fprintf fmtr "%d" value
@@ -115,8 +116,8 @@ let rec pp_value fmtr =
   | ValBool value -> fprintf fmtr "%B" value
   | ValString value -> fprintf fmtr "%S" value
   | ValUnit -> fprintf fmtr "()"
-  | ValList list -> fprintf fmtr "[%a]" (fun fmt -> pp_list fmt ", ") list
-  | ValTuple tuple -> fprintf fmtr "(%a)" (fun fmt -> pp_list fmt ", ") tuple
+  | ValList list -> fprintf fmtr "[%a]" (fun fmt -> pp_list fmt) list
+  | ValTuple tuple -> fprintf fmtr "(%a)" (fun fmt -> pp_list fmt) tuple
   | ValFun _ -> fprintf fmtr "fn"
 ;;
 
