@@ -59,7 +59,7 @@ let snd_liter =
         ; unit_snd_liter
         ]
     in
-    parens slf <|> lift expr_b_expr parser_literal)
+    parens slf <|> lift (fun b -> XLiteral b) parser_literal)
 ;;
 
 let snd_identifier =
@@ -101,7 +101,7 @@ let snd_identifier =
       >>= fun name ->
       if List.exists (fun x -> x = name) keywords
       then fail "Keyword cannot be used in the name."
-      else return (expr_identifier name)
+      else return ((fun b -> XIdentifier b) name)
     in
     parser_identifier)
 ;;
@@ -134,9 +134,10 @@ let snd_unary s =
         ; snd_identifier
         ]
     in
+    let constr_unary_op op b = XUnaryOp (op, b) in
     parens slf
-    <|> lift2 expr_unary_op (char '~' >>| fun _ -> Neg) helper_parser_neg
-    <|> lift2 expr_unary_op (string "not" >>| fun _ -> Not) helper_parser_not)
+    <|> lift2 constr_unary_op (char '~' >>| fun _ -> Neg) helper_parser_neg
+    <|> lift2 constr_unary_op (string "not" >>| fun _ -> Not) helper_parser_not)
 ;;
 
 let snd_binary s =
@@ -174,10 +175,13 @@ let snd_binary s =
         ; snd_identifier
         ]
     in
+    let constr_binary_op op left_expr right_expr =
+      XBinaryOp (op, left_expr, right_expr)
+    in
     let rec parser_bin_op snd_exprarser op_parsers =
       let chainl1 snd_expr op_p =
         let rec go acc =
-          lift2 (fun f x -> expr_binary_op f acc x) op_p snd_expr >>= go <|> return acc
+          lift2 (fun f x -> constr_binary_op f acc x) op_p snd_expr >>= go <|> return acc
         in
         snd_expr >>= fun init -> go init
       in
@@ -213,12 +217,12 @@ let parser_collection_helper brackets_parser constructor s =
 
 let snd_tuplexpr s =
   let brackets parser = skip_spaces *> char '(' *> parser <* char ')' in
-  parser_collection_helper brackets expr_tuple s
+  parser_collection_helper brackets (fun b -> XTuple b) s
 ;;
 
 let snd_list s =
   let brackets parser = skip_spaces *> char '[' *> parser <* char ']' in
-  parser_collection_helper brackets expr_list s
+  parser_collection_helper brackets (fun b -> XList b) s
 ;;
 
 let snd_cons_list s =
@@ -242,8 +246,9 @@ let snd_cons_list s =
         ; snd_identifier
         ]
     in
+    let constr_cons_list h tl = XConsList (h, tl) in
     parens slf
-    <|> lift2 expr_cons_list (helper_parser <* separator) (slf <|> helper_parser))
+    <|> lift2 constr_cons_list (helper_parser <* separator) (slf <|> helper_parser))
 ;;
 
 let snd_caseexpr s =
@@ -276,10 +281,11 @@ let snd_caseexpr s =
         ; snd_identifier
         ]
     in
+    let constr_casexpr_of h tl = XCaseOf (h, tl) in
     parens slf
     <|> string "case"
         *> lift2
-             expr_casexpr_of
+             constr_casexpr_of
              helper_parser_right
              (let parser_case =
                 lift2
@@ -314,13 +320,14 @@ let snd_let s =
         ; snd_identifier
         ]
     in
+    let constr_let_in h tl = XLetIn (h, tl) in
     parens slf
     <|> string "let"
         *> take_while1 (function
              | ' ' | '\t' | '\n' | '\r' -> true
              | _ -> false)
         *> lift2
-             expr_let_in
+             constr_let_in
              (many1 (s.snd_val_dec s <|> s.snd_val_rec_dec s))
              (skip_spaces *> string "in" *> helper_parser <* skip_spaces <* string "end"))
 ;;
@@ -354,7 +361,8 @@ let snd_app s =
         ; snd_identifier
         ]
     in
-    let apply_lift acc = lift (expr_application acc) parser_op in
+    let constr_app func_expr args = XApplication (func_expr, args) in
+    let apply_lift acc = lift (constr_app acc) parser_op in
     let rec go acc = apply_lift acc >>= go <|> return acc in
     parens slf <|> parser_func >>= fun init -> apply_lift init >>= fun init -> go init)
 ;;
@@ -384,18 +392,29 @@ let parser_value_declaration_helper keyword constructor s =
     lift2
       constructor
       (snd_identifier
-      >>= (function
-            | XIdentifier x -> return x
-            | _ -> fail "Unreachable variable.")
-      >>= fun name ->
-      match name with
-      | "_" -> fail "Wildcard not expected."
-      | _ -> return name)
+       >>= (function
+             | XIdentifier x -> return x
+             | _ -> fail "Unreachable variable.")
+       >>= fun name ->
+       match name with
+       | "_" -> fail "Wildcard not expected."
+       | _ -> return name)
       (skip_spaces *> string "=" *> helper_parser))
 ;;
 
-let snd_val_dec s = parser_value_declaration_helper "val" expr_val_dec s
-let snd_val_rec_dec s = parser_value_declaration_helper "val rec" expr_val_rec_dec s
+let snd_val_dec s =
+  parser_value_declaration_helper
+    "val"
+    (fun value_expr expr -> XValDec (value_expr, expr))
+    s
+;;
+
+let snd_val_rec_dec s =
+  parser_value_declaration_helper
+    "val rec"
+    (fun value_expr expr -> XValRecDec (value_expr, expr))
+    s
+;;
 
 let snd_arrfun s =
   fix (fun slf ->
@@ -417,17 +436,18 @@ let snd_arrfun s =
         ; snd_identifier
         ]
     in
+    let constr_arrfun h tl = XArrowFun (h, tl) in
     parens slf
     <|> string "fn"
         *> lift2
-             expr_arrow_fun
+             constr_arrfun
              (snd_identifier
-             >>= (function
-                   | XIdentifier x -> return [ x ]
-                   | _ -> fail "Unreachable variable.")
-             <* skip_spaces
-             <* string "=>"
-             <* skip_spaces)
+              >>= (function
+                    | XIdentifier x -> return [ x ]
+                    | _ -> fail "Unreachable variable.")
+              <* skip_spaces
+              <* string "=>"
+              <* skip_spaces)
              (helper_parser <* skip_spaces))
 ;;
 
@@ -451,10 +471,13 @@ let snd_if_then_else s =
         ; snd_identifier
         ]
     in
+    let constr_if_then_else if_expr then_expr else_expr =
+      XIfThenElse (if_expr, then_expr, else_expr)
+    in
     parens slf
     <|> string "if"
         *> lift3
-             expr_if_then_else
+             constr_if_then_else
              helper_parser
              (skip_spaces *> string "then" *> helper_parser)
              (skip_spaces *> string "else" *> helper_parser))

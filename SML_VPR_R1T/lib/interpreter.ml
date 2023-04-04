@@ -4,6 +4,64 @@
 
 open Ast
 
+type env = (name, value, Base.String.comparator_witness) Base.Map.t
+
+and is_rec =
+  | Rec
+  | NRec
+
+and value =
+  | ValInt of int
+  | ValString of string
+  | ValBool of bool
+  | ValChar of char
+  | ValUnit
+  | ValList of value list
+  | ValTuple of value list
+  | ValFun of name list * expr * env * is_rec
+
+type error =
+  [ `DivisionByZero
+  | `ValueUnbound
+  | `Unreachable
+  | `OperationUnsupport
+  | `WildcardMisuse
+  | `PatternMatchingFail
+  | `PatternMatchingIncomplete
+  ]
+
+let rec pp_value fmtr =
+  let open Format in
+  let pp_list fmt value =
+    pp_print_list
+      ~pp_sep:(fun fmt _ -> fprintf fmt ", ")
+      (fun fmt value -> pp_value fmt value)
+      fmt
+      value
+  in
+  function
+  | ValInt value -> fprintf fmtr "%d" value
+  | ValChar value -> fprintf fmtr "%C" value
+  | ValBool value -> fprintf fmtr "%B" value
+  | ValString value -> fprintf fmtr "%S" value
+  | ValUnit -> fprintf fmtr "()"
+  | ValList list -> fprintf fmtr "[%a]" (fun fmt -> pp_list fmt) list
+  | ValTuple tuple -> fprintf fmtr "(%a)" (fun fmt -> pp_list fmt) tuple
+  | ValFun _ -> fprintf fmtr "fn"
+;;
+
+let pp_error fmt (err : error) =
+  let open Format in
+  match err with
+  | `ValueUnbound -> fprintf fmt "Unbound value."
+  | `Unreachable -> fprintf fmt "Unreachable code used."
+  | `OperationUnsupport -> fprintf fmt "Unsupported operation."
+  | `DivisionByZero -> fprintf fmt "Division by zero."
+  | `WildcardMisuse -> fprintf fmt "Wildcard misused."
+  | `PatternMatchingFail -> fprintf fmt "Pattern-matching failed."
+  | `PatternMatchingIncomplete -> fprintf fmt "Pattern-matching is not exhaustive."
+;;
+
 module type MONAD_ERROR = sig
   type 'a t = ('a, error) result
 
@@ -260,6 +318,9 @@ open Interpret (struct
 
   let ( *> ) l r = l >>= fun _ -> r
 end)
+
+let print_value = Format.printf "%a\n" pp_value
+let print_error = Format.printf "%a" pp_error
 
 let interpret input =
   match Parser.parse_strings input with
