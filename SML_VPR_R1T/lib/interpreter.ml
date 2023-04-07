@@ -174,13 +174,13 @@ end = struct
         | "_" -> env
         | _ -> update env id eval_argument
       in
-      (match identifier_list with
-       | [] -> eval body env
-       | _ -> return (ValFun (identifier_list, body, env, recursive)))
+      if identifier_list = []
+      then eval body env
+      else return (ValFun (identifier_list, body, env, recursive))
     | XArrowFun (arguments_list, body) ->
-      (match arguments_list with
-       | [] -> eval body env
-       | _ -> return (ValFun (arguments_list, body, env, NRec)))
+      if arguments_list = []
+      then eval body env
+      else return (ValFun (arguments_list, body, env, NRec))
     | XValDec (_, body) -> eval body env
     | XValRecDec (_, body) ->
       let* eval_body = eval body env in
@@ -191,8 +191,7 @@ end = struct
     | XIfThenElse (if_expr, then_expr, else_expr) ->
       let* eval_conditional = eval if_expr env in
       (match eval_conditional with
-       | ValBool true -> eval then_expr env
-       | ValBool false -> eval else_expr env
+       | ValBool b -> if b then eval then_expr env else eval else_expr env
        | _ -> fail `Unreachable)
     | XUnaryOp (op, liter) ->
       let* liter = eval liter env in
@@ -299,23 +298,11 @@ end = struct
 end
 
 open Interpret (struct
+  include Base.Result
+
   type 'a t = ('a, error) result
 
-  let return = Stdlib.Result.ok
-  let fail = Stdlib.Result.error
-
-  let ( >>= ) l_expr r_expr =
-    match l_expr with
-    | Ok l -> r_expr l
-    | Error s -> Error s
-  ;;
-
-  let ( let* ) l_expr r_expr =
-    match l_expr with
-    | Ok l -> r_expr l
-    | Error s -> Error s
-  ;;
-
+  let ( let* ) monad f = bind monad ~f
   let ( *> ) l r = l >>= fun _ -> r
 end)
 

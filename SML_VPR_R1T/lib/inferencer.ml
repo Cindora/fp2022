@@ -77,6 +77,11 @@ end
 
 type fresh = int
 
+let var_t n = TVar n
+let arrow_t left_type right_type = TArr (left_type, right_type)
+let tuple_t type_list = TTuple type_list
+let list_t type_expr = TList type_expr
+
 module Type = struct
   type t = type_expr
 

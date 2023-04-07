@@ -250,7 +250,7 @@ let snd_cons_list s =
         ; snd_identifier
         ]
     in
-    parens slf <|> lift2 constr_cons_list (helper <* separator) (slf <|> helper))
+    lift2 constr_cons_list (helper <* separator) (slf <|> helper) <|> parens slf)
 ;;
 
 let snd_case s =
@@ -300,6 +300,44 @@ let snd_case s =
               *> sep_by1 (skip_spaces_rstr "|") parser_case))
 ;;
 
+let parser_value_declaration_helper keyword constructor s =
+  let skip_key_skip = skip_spaces_rstr keyword *> skip_spaces in
+  let constr_id = function
+    | XIdentifier x -> if x = "_" then fail "Wildcard not expected." else return x
+    | _ -> fail "Unreachable variable."
+  in
+  fix (fun _ ->
+    skip_key_skip
+    *>
+    let helper =
+      choice
+        [ s.snd_unary s
+        ; s.snd_binary s
+        ; s.snd_tuple s
+        ; s.snd_list s
+        ; s.snd_cons_list s
+        ; s.snd_case s
+        ; s.snd_let s
+        ; s.snd_app s
+        ; s.snd_arrfun s
+        ; s.snd_if_then_else s
+        ; snd_liter
+        ; snd_identifier
+        ]
+    in
+    lift2 constructor (snd_identifier >>= constr_id) (skip_spaces_rstr "=" *> helper))
+;;
+
+let snd_val_dec s =
+  let constr_val_dec value_expr expr = XValDec (value_expr, expr) in
+  parser_value_declaration_helper "val" constr_val_dec s
+;;
+
+let snd_val_rec_dec s =
+  let constr_val_dec_rec value_expr expr = XValRecDec (value_expr, expr) in
+  parser_value_declaration_helper "val rec" constr_val_dec_rec s
+;;
+
 let snd_let s =
   let constr_let_in h tl = XLetIn (h, tl) in
   let skip_let_spaces1 =
@@ -332,7 +370,7 @@ let snd_let s =
         *> lift2
              constr_let_in
              (many1 (s.snd_val_dec s <|> s.snd_val_rec_dec s))
-             (skip_spaces_rstr "in" *> helper <* skip_spaces_rstr "end"))
+             (skip_spaces_rstr "in" *> helper <* skip_spaces_lstr "end"))
 ;;
 
 let snd_app s =
@@ -368,44 +406,6 @@ let snd_app s =
     let apply_lift acc = lift (constr_app acc) parser_op in
     let rec go acc = apply_lift acc >>= go <|> return acc in
     parens slf <|> parser_func >>= fun init -> apply_lift init >>= fun init -> go init)
-;;
-
-let parser_value_declaration_helper keyword constructor s =
-  let skip_key_skip = skip_spaces *> string keyword *> skip_spaces in
-  let constr_id = function
-    | XIdentifier x -> if x = "_" then fail "Wildcard not expected." else return x
-    | _ -> fail "Unreachable variable."
-  in
-  fix (fun _ ->
-    skip_key_skip
-    *>
-    let helper =
-      choice
-        [ s.snd_unary s
-        ; s.snd_binary s
-        ; s.snd_tuple s
-        ; s.snd_list s
-        ; s.snd_cons_list s
-        ; s.snd_case s
-        ; s.snd_let s
-        ; s.snd_app s
-        ; s.snd_arrfun s
-        ; s.snd_if_then_else s
-        ; snd_liter
-        ; snd_identifier
-        ]
-    in
-    lift2 constructor (snd_identifier >>= constr_id) (skip_spaces_rstr "=" *> helper))
-;;
-
-let snd_val_dec s =
-  let constr_val_dec_rec value_expr expr = XValDec (value_expr, expr) in
-  parser_value_declaration_helper "val" constr_val_dec_rec s
-;;
-
-let snd_val_rec_dec s =
-  let constr_val_dec_rec value_expr expr = XValRecDec (value_expr, expr) in
-  parser_value_declaration_helper "val rec" constr_val_dec_rec s
 ;;
 
 let snd_arrfun s =
